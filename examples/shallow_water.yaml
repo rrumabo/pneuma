@@ -1,6 +1,0 @@
-model: shallow_water_2d
-grid: {Nx: 128, Ny: 64, Lx: 1.0, Ly: 0.5}
-time: {dt: 2.5e-4, T: 0.2, method: rk4, save_every: 25}
-params: {g: 9.81, f: 1e-4, nu: 1e-4, h0: 1.0, Du: 1e-3, Dv: 1e-3}
-ic: {type: jet, amplitude: 0.1, width: 0.1}
-output: {dir: outputs/shallow_water2d}

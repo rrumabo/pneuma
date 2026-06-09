@@ -1,6 +1,0 @@
-{
-  "experimental/tests/test_v5_config_cli.py::test_config_loads_defaults": true,
-  "experimental/tests/test_v4_validation.py": true,
-  "experimental/tests/test_v5_config_cli.py": true,
-  "legacy/experimental/tests/test_v4_validation.py": true
-}

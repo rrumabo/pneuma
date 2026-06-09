@@ -1,8 +1,4 @@
 [
-  "experimental/tests/test_v4_validation.py::test_constant_Fh_mean_drift",
-  "experimental/tests/test_v4_validation.py::test_mass_conservation_no_forcing",
-  "experimental/tests/test_v5_config_cli.py::test_config_loads_defaults",
-  "legacy/experimental/tests/test_v5_config_cli.py::test_config_loads_defaults",
   "tests/test_cfl_heat.py::test_cfl_heat_stable_threshold",
   "tests/test_cfl_heat.py::test_cfl_heat_violation_detectable",
   "tests/test_cli_example_runs.py::test_cli_example_runs_if_present",
@@ -10,9 +6,5 @@
   "tests/test_reproducibility_runner.py::test_runner_reproducible_with_same_seed_and_params",
   "tests/test_runner_constant_solution.py::test_runner_keeps_constant_state_and_writes_metrics",
   "tests/test_runner_decay.py::test_exponential_decay_euler_basic_correctness",
-  "tests/test_runner_decay.py::test_exponential_decay_rk4_converges",
-  "tests/test_smoke.py::test_smoke",
-  "tests/test_v4_validation.py::test_constant_Fh_mean_drift",
-  "tests/test_v4_validation.py::test_mass_conservation_no_forcing",
-  "tests/test_v5_config_cli.py::test_config_loads_defaults"
+  "tests/test_runner_decay.py::test_exponential_decay_rk4_converges"
 ]

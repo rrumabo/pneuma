@@ -1,8 +1,8 @@
 import argparse, os, numpy as np
-from pneuma.runner import solve_fixed_step
-from pneuma.utils.config_loader import load_config
-from pneuma.pdes.heat_solver_1d import run_heat_solver_1d 
-from pneuma.visualization.plotting_1_2d import plot_field_1d
+from src.runner import solve_fixed_step
+from src.utils.config_loader import load_config
+from src.pdes.heat_solver_1d import run_heat_solver_1d 
+from src.visualization.plotting_1_2d import plot_field_1d
 
 def rhs_heat_1d(t, u, p):
     """

@@ -3,9 +3,9 @@ from typing import Callable, Dict, Iterable, List, Optional, Tuple, Any
 from pathlib import Path
 import numpy as np
 
-from pneuma.core import time_integrators as ti
-from pneuma.utils.diagnostic_manager import DiagnosticManager
-from pneuma.utils.diagnostics import (
+from src.core import time_integrators as ti
+from src.utils.diagnostic_manager import DiagnosticManager
+from src.utils.diagnostics import (
     compute_norms,
     cfl_number_advection,
     cfl_number_diffusion,

@@ -2,6 +2,7 @@
   "experimental/tests/test_v4_validation.py::test_constant_Fh_mean_drift",
   "experimental/tests/test_v4_validation.py::test_mass_conservation_no_forcing",
   "experimental/tests/test_v5_config_cli.py::test_config_loads_defaults",
+  "legacy/experimental/tests/test_v5_config_cli.py::test_config_loads_defaults",
   "tests/test_cfl_heat.py::test_cfl_heat_stable_threshold",
   "tests/test_cfl_heat.py::test_cfl_heat_violation_detectable",
   "tests/test_cli_example_runs.py::test_cli_example_runs_if_present",

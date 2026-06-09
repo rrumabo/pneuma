@@ -1,6 +1,6 @@
 import numpy as np
 from pathlib import Path
-from pneuma.runner import solve_fixed_step
+from src.runner import solve_fixed_step
 
 def f_zero(t, u, p):
     return np.zeros_like(u)

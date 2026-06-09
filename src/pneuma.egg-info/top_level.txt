@@ -1,0 +1,8 @@
+core
+initial_conditions
+io
+models
+numerics
+pdes
+utils
+visualization

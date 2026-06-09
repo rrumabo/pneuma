@@ -3,8 +3,8 @@ import sys
 from pathlib import Path
 from typing import List
 
-from pneuma.config import load_config
-from pneuma.runner import run_from_config
+from src.config import load_config
+from src.runner import run_from_config
 
 
 def main(argv: List[str] | None = None) -> None:

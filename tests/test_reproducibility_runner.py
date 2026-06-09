@@ -1,5 +1,5 @@
 import numpy as np
-from pneuma.runner import solve_fixed_step
+from src.runner import solve_fixed_step
 
 def f_linear_decay(t, u, p):
     lam = p.get("lam", 1.0)

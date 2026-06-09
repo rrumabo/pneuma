@@ -3,9 +3,9 @@ from typing import Callable, Dict, Iterable, List, Optional, Tuple, Any
 from pathlib import Path
 import numpy as np
 
-from src.core import time_integrators as ti
-from src.utils.diagnostic_manager import DiagnosticManager
-from src.utils.diagnostics import (
+from pneuma.core import time_integrators as ti
+from pneuma.utils.diagnostic_manager import DiagnosticManager
+from pneuma.utils.diagnostics import (
     compute_norms,
     cfl_number_advection,
     cfl_number_diffusion,
@@ -174,18 +174,17 @@ def solve_fixed_step(
                 grid_info = int(last_state.size)
         else:
             grid_info = 0
-        try:
-            write_metrics_json(
-                out_dir=metrics_out_dir,
-                scheme=method,
-                grid=grid_info,
-                dt=float(dt),
-                cfl=cfls,
-                norms_over_time={"L2": l2_hist} if l2_hist else {},
-                extras={"elapsed_s": float(dm.summary().get("elapsed_s", 0.0))},
-            )
-        except Exception:
-            pass
+
+        # Let this raise if it's wrong – we *want* to see the bug.
+        write_metrics_json(
+            out_dir=metrics_out_dir,
+            scheme=method,
+            grid=grid_info,
+            dt=float(dt),
+            cfl=cfls,
+            norms_over_time={"L2": l2_hist} if l2_hist else {},
+            extras={"elapsed_s": float(dm.summary().get("elapsed_s", 0.0))},
+        )    
 
     T = np.asarray(t_hist, dtype=float)
     Y = np.stack(y_hist, axis=0)  # shape (Ns, ...)
@@ -199,3 +198,149 @@ def solve_fixed_step(
         "cfl": cfls,
     }
     return Solution(t=T, y=Y, meta=meta)
+
+def _run_heat1d_from_cfg(cfg):
+    """
+    Execute a 1D heat equation run from a Config-like object.
+
+    Expects at least:
+      - cfg.model == "heat1d"
+      - cfg.grid.N (or Nx), cfg.grid.L
+      - cfg.time.dt, cfg.time.T
+      - cfg.physics.params["alpha"]
+      - cfg.ic or cfg.initial_condition with fields:
+          type: "gaussian"
+          center, sigma, amp
+      - cfg.io.outdir
+      - optionally cfg.integrator.method
+    """
+    # --- Extract grid ---
+    grid = cfg.grid
+    N = int(getattr(grid, "N", getattr(grid, "Nx", 0)))
+    if N <= 0:
+        raise ValueError("heat1d: grid.N (or Nx) must be positive")
+
+    L = float(getattr(grid, "L", 1.0))
+    dx = L / N
+
+    # --- Time config ---
+    time_cfg = cfg.time
+    dt = float(getattr(time_cfg, "dt", 0.0))
+    T = float(getattr(time_cfg, "T", getattr(time_cfg, "t_end", 0.0)))
+    if dt <= 0.0 or T <= 0.0:
+        raise ValueError("heat1d: dt and T must be positive")
+
+    t_span = (0.0, T)
+
+    # --- Physics (alpha) ---
+    phys = getattr(cfg, "physics", None)
+    alpha = 0.01
+    if phys is not None:
+        params_dict = getattr(phys, "params", {}) or {}
+        if isinstance(params_dict, dict) and "alpha" in params_dict:
+            alpha = float(params_dict["alpha"])
+
+    # --- Initial condition ---
+    ic = getattr(cfg, "ic", None)
+
+    # Try alternative attribute name
+    if ic is None and hasattr(cfg, "initial_condition"):
+        ic = getattr(cfg, "initial_condition")
+
+    # If still missing, fall back to a default Gaussian
+    if ic is None:
+        print("[pneuma] warning: no IC found in config, using default gaussian IC")
+        class _DefaultIC:
+            type = "gaussian"
+            center = 0.5 * L
+            sigma = 0.1 * L
+            amp = 1.0
+        ic = _DefaultIC()
+
+    ic_type = getattr(ic, "type", "gaussian")
+    x0 = float(getattr(ic, "center", 0.5 * L))
+    sigma = float(getattr(ic, "sigma", 0.1 * L))
+    amp = float(getattr(ic, "amp", 1.0))
+
+    x = np.linspace(0.0, L, N, endpoint=False)
+
+    if ic_type.lower() == "gaussian":
+        u0 = amp * np.exp(-0.5 * ((x - x0) / sigma) ** 2)
+    else:
+        # Fallback: just a small bump
+        u0 = amp * np.exp(-0.5 * ((x - x0) / sigma) ** 2)
+
+    # --- Output directory ---
+    io_cfg = getattr(cfg, "io", None)
+    outdir_str = getattr(io_cfg, "outdir", "outputs/heat1d") if io_cfg is not None else "outputs/heat1d"
+    outdir = Path(outdir_str)
+    outdir.mkdir(parents=True, exist_ok=True)
+
+    # --- Integrator method ---
+    integrator_cfg = getattr(cfg, "integrator", None)
+    method = getattr(integrator_cfg, "method", "rk4") if integrator_cfg is not None else "rk4"
+
+    # --- Define RHS for heat equation: u_t = alpha * u_xx with periodic BCs ---
+    def heat_rhs(t, u, params):
+        dx_loc = float(params["dx"])
+        alpha_loc = float(params["alpha"])
+        # periodic Laplacian
+        lap = (np.roll(u, -1) + np.roll(u, 1) - 2.0 * u) / (dx_loc ** 2)
+        return alpha_loc * lap
+
+    params = {"dx": dx, "alpha": alpha}
+
+    # --- Run the solver using the generic fixed-step integrator ---
+    sol = solve_fixed_step(
+        f=heat_rhs,
+        t_span=t_span,
+        y0=u0,
+        dt=dt,
+        method=method,
+        params=params,
+        save_every=1,
+        metrics_out_dir=outdir,
+        norm_grid=(dx,None)
+    )
+
+    u_final = sol.y[-1]
+
+    # --- Save outputs ---
+    np.savetxt(outdir / "x.csv", x)
+    np.savetxt(outdir / "u_final.csv", u_final)
+
+    # Optional: simple plot
+    try:
+        import matplotlib.pyplot as plt
+
+        fig, ax = plt.subplots()
+        ax.plot(x, u0, label="t=0")
+        ax.plot(x, u_final, label=f"t={T}")
+        ax.set_xlabel("x")
+        ax.set_ylabel("u")
+        ax.legend()
+        ax.set_title("Heat1D: initial vs final")
+        fig.tight_layout()
+        fig.savefig(outdir / "u_final.png", dpi=150)
+        plt.close(fig)
+    except Exception:
+        pass
+
+    print(f"[pneuma] heat1d run wrote outputs to {outdir}")
+    return sol
+
+def run_from_config(cfg):
+    """
+    Dispatch runs based on cfg.model.
+
+    v0.2: only heat1d is wired for real.
+          Other models fall back to a stub.
+    """
+    model = getattr(cfg, "model", "unknown")
+
+    if model == "heat1d":
+        return _run_heat1d_from_cfg(cfg)
+
+    # Future: add shallow-water, ERA5-driven, etc.
+    print(f"[pneuma] (stub) run_from_config for model={model}")
+    return None

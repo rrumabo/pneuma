@@ -1,5 +1,5 @@
 import numpy as np
-from src.utils.diagnostics import compute_norms
+from pneuma.utils.diagnostics import compute_norms
 
 def test_norms_scale_down_monotonic():
     N = 256

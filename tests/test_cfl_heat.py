@@ -1,4 +1,4 @@
-from src.utils.diagnostics import cfl_number_diffusion
+from pneuma.utils.diagnostics import cfl_number_diffusion
 
 def test_cfl_heat_stable_threshold():
     dx, nu = 1.0/64, 1e-3

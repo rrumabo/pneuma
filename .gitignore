@@ -1,0 +1,16 @@
+# venv
+.venv/
+
+# Python build junk
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+
+# macOS junk
+.DS_Store
+
+# local tools
+.vscode/
+.ipynb_checkpoints/

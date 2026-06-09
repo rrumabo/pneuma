@@ -1,5 +1,5 @@
 import numpy as np
-from src.runner import solve_fixed_step
+from pneuma.runner import solve_fixed_step
 
 def f(t, y, p):
     """ODE: y' = -k y"""

@@ -4,6 +4,46 @@ from pathlib import Path
 import yaml, re
 from typing import Optional
 
+class ConfigError(ValueError):
+    """User-facing config errors with clear messages."""
+    pass
+
+
+def validate_heat1d_dict(d: dict) -> None:
+    """Basic schema validation for the heat1d YAML."""
+    required_sections = ["grid", "time", "physics", "initial_condition", "io"]
+    for sec in required_sections:
+        if sec not in d:
+            raise ConfigError(f"Missing required section '{sec}' in config.")
+
+    grid = d["grid"]
+    if not ("N" in grid or ("Nx" in grid and "Ny" in grid)):
+        raise ConfigError("grid must contain either (N, L) or (Nx, Ny, Lx, Ly) for heat1d.")
+
+    time = d["time"]
+    if "dt" not in time or "T" not in time:
+        raise ConfigError("time must contain 'dt' and 'T' for heat1d.")
+
+    phys = d["physics"]
+    if phys.get("pde") not in (None, "heat"):
+        raise ConfigError("physics.pde must be 'heat' (or omitted) for heat1d configs.")
+    params = phys.get("params", {})
+    if "alpha" not in params:
+        raise ConfigError("physics.params.alpha is required for heat1d.")
+
+    ic = d["initial_condition"]
+    if ic.get("type") != "gaussian":
+        raise ConfigError(
+            f"initial_condition.type must be 'gaussian' for heat1d, got {ic.get('type')!r}"
+        )
+    for k in ("center", "sigma", "amp"):
+        if k not in ic:
+            raise ConfigError(f"initial_condition.{k} is required for heat1d.")
+
+    io = d["io"]
+    if "outdir" not in io:
+        raise ConfigError("io.outdir is required.")
+
 @dataclass
 class GridCfg:
     Nx:int; Ny:int; Lx:float; Ly:float
@@ -60,6 +100,15 @@ def load_config(path: str | Path) -> RunCfg:
     with open(path, "r", encoding="utf-8") as f:
         d = yaml.safe_load(f) or {}
 
+        # decide model name, default to heat1d
+        model_name = str(d.get("model", "heat1d")).lower()
+
+        if model_name == "heat1d":
+            validate_heat1d_dict(d)
+        else:
+            # For v1.0, we only support heat1d through this loader
+            raise ConfigError(f"Unsupported model '{model_name}' in this version.")
+
     # --- physics block + shims ---
     phys_d = dict(d.get("physics", {}) or {})
 
@@ -108,8 +157,25 @@ def load_config(path: str | Path) -> RunCfg:
     else:
         raise TypeError("data.bbox must be [lon0, lon1, lat0, lat1] or a dict with those keys.")
 
+    # --- grid shims: support both 1D (N, L) and 2D (Nx, Ny, Lx, Ly) ---
+    raw_grid = dict(d.get("grid", {}) or {})
+    if "Nx" in raw_grid and "Ny" in raw_grid:
+        # 2D case: assume user provided full info
+        grid_d = raw_grid
+    elif "N" in raw_grid and "L" in raw_grid:
+        # 1D case: map to a degenerate 2D grid with Ny=1, Ly=1.0
+        N = int(raw_grid["N"])
+        L = float(raw_grid["L"])
+        grid_d = {
+            "Nx": N,
+            "Ny": 1,
+            "Lx": L,
+            "Ly": 1.0,
+        }
+    else:
+        raise KeyError("grid section must contain either (Nx, Ny, Lx, Ly) or (N, L)")
+
     # --- path resolution & default cache key ---
-    grid_d = dict(d["grid"])  # need Nx,Ny for default key
 
     # expand user/home and make absolute paths
     if data_d.get("era5_nc"):
@@ -131,13 +197,30 @@ def load_config(path: str | Path) -> RunCfg:
     d["output"]  = out_d
     d["data"]    = data_d
     d["cache"]   = cache_d
+    d["grid"]    = grid_d
 
-    # --- build dataclasses ---
+    # --- model-specific physics payload ----------------------------------------
+    # model_name was computed earlier (defaulting to 'heat1d')
+
+    if model_name == "heat1d":
+        # For heat1d, PhysCfg isn't actually used by the solver.
+        # We just give it a harmless dummy config.
+        phys_cfg = PhysCfg(g=0.0, f=0.0, nu=0.0, Du=0.0, Dv=0.0)
+    else:
+        # For shallow-water-style models, pull only the keys PhysCfg expects.
+        g  = float(phys_d.get("g", 9.81))
+        f  = float(phys_d.get("f", 0.0))
+        nu = float(phys_d.get("nu", 0.0))
+        Du = float(phys_d.get("Du", 0.0))
+        Dv = float(phys_d.get("Dv", 0.0))
+        phys_cfg = PhysCfg(g=g, f=f, nu=nu, Du=Du, Dv=Dv)
+
+    # --- build dataclasses ------------------------------------------------------
     return RunCfg(
-        model=str(d["model"]),
+        model=model_name,
         grid=GridCfg(**d["grid"]),
         time=TimeCfg(**time_d),
-        physics=PhysCfg(**phys_d),
+        physics=phys_cfg,
         forcing=ForcingCfg(**forcing_d),
         data=DataCfg(**data_d),
         cache=CacheCfg(**cache_d),

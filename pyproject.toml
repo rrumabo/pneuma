@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pneuma"
+version = "0.1.0"
+description = "Small PDE + ERA5 sandbox for heat and shallow-water experiments."
+authors = [
+  { name = "Stylianos Savva" }
+]
+requires-python = ">=3.11"
+dependencies = [
+  "numpy",
+  "scipy",
+  "matplotlib",
+  "xarray",
+  "netCDF4",
+  "pandas",
+  "pyyaml",
+]
+
+[project.scripts]
+pneuma = "pneuma.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]

@@ -12,7 +12,7 @@ def open_era5(path: str) -> xr.Dataset:
     """
     p = Path(path).expanduser().resolve()
     if not p.exists():
-        raise SystemExit(f"[Metis] ERA5 file not found: {p}")
+        raise SystemExit(f"[pneuma] ERA5 file not found: {p}")
 
     suffix = p.suffix.lower()
     if suffix in {".grib", ".grb"} or p.name.lower().endswith(".grib2"):
@@ -141,7 +141,7 @@ def to_cache(fields: Mapping[str, np.ndarray], path_npz: Union[str, Path]) -> No
 def from_cache(path_npz: Union[str, Path]) -> Dict[str, np.ndarray]:
     p = Path(path_npz).expanduser().resolve()
     if not p.exists():
-        raise FileNotFoundError(f"[Metis] cache not found: {p}")
+        raise FileNotFoundError(f"[pneuma] cache not found: {p}")
     return _npz_load(p)
 
 def mean_bias_correction(model: np.ndarray, ref: np.ndarray) -> np.ndarray:

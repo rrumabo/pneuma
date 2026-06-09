@@ -1,7 +1,6 @@
-# src/models/sw_adapter.py
 from __future__ import annotations
 import numpy as np
-from .shallow_water import rhs_sw_2d, cfl_gravity
+from src.pdes.shallow_water import rhs_sw_2d, cfl_gravity
 
 def rhs(t: float, Y: np.ndarray, params: dict) -> np.ndarray:
     """
